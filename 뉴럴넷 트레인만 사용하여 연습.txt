@@ -1,0 +1,183 @@
+import numpy as np
+import tensorflow as tf
+import random
+from PIL import Image
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.utils import to_categorical
+
+input_dim = 784
+hidden_dim = 50
+hidden_dim2 = 50
+output_dim = 10
+accuracy = 0
+batch_size = 1000
+pre = 0.0
+# 입력가중치
+W1 = [[0 for i in range(hidden_dim)] for j in range(input_dim)]
+b1 = [0 for i in range(hidden_dim)]
+W1 = np.array(W1)
+b1 = np.array(b1)
+# 은닉가중치
+W2 = [[0 for i in range(hidden_dim2)] for j in range(hidden_dim)]
+b2 = [0 for i in range(hidden_dim2)]
+W2 = np.array(W2)
+b2 = np.array(b2)
+# 은닉가중치2
+W3 = [[0 for i in range(output_dim)] for j in range(hidden_dim2)]
+b3 = [0 for i in range(output_dim)]
+W3 = np.array(W3)
+b3 = np.array(b3)
+# 렐루 함수
+def relu(x):
+    return np.maximum(0, x)
+# 시그모이드 함수
+def sigmoid(x):
+    return 1/(1+np.exp(-x))
+# 소프트맥스
+def softmax(a):
+    c = np.max(a)
+    exp_a = np.exp(a-c)
+    sum_exp_a = np.sum(exp_a)
+    y = exp_a/sum_exp_a
+    return y
+  #크로스 엔트로피
+def cross_entropy(y, t):
+    s = 1e-7
+    return -np.sum(t[i:i+batch_size]* np.log(y+s))
+#cost값 구하기
+def loss(y, t) :
+    g = cross_entropy(y, t)
+    return g
+
+def sigmoid_grad(x):
+    return (1.0 - sigmoid(x)) * sigmoid(x)
+
+def get_train_data():
+    (train_data, train_labels), (test_data, test_labels) = mnist.load_data()
+  # flatten = 2차원 1차원으로 펴줌
+    train_data = train_data.reshape(-1,input_dim)
+  
+  #normaloze = 0~1로 만들어줌
+    train_data = train_data.astype(np.float32) / 255
+  
+  #원 핫 인코더
+    train_labels = to_categorical(train_labels, 10)
+  
+    return train_data, train_labels
+
+def get_test_data():
+    (train_data, train_labels), (test_data, test_labels) = mnist.load_data()
+  # flatten = 2차원 1차원으로 펴줌
+    test_data = test_data.reshape(-1, input_dim)
+
+  #normaloze = 0~1로 만들어줌
+    test_data = test_data.astype(np.float32) / 255
+
+    return test_data, test_labels
+
+def model(input):
+    for i in range(input_dim):
+        for j in range(hidden_dim):
+            a = random.randrange(1,3)
+            W1[i][j] = a
+
+    for i in range(hidden_dim):
+        for j in range(hidden_dim2):
+            a = random.randrange(1,3)
+            W1[i][j] = a
+        a = random.randrange(1,3)
+        b1[i] = a
+
+    for i in range(hidden_dim2):
+        for j in range(output_dim):
+            a = random.randrange(1,3)
+            W1[i][j] = a
+        a = random.randrange(1,3)
+        b2[i] = a
+
+    for i in range(output_dim):
+        a = random.randrange(1,3)
+        b3[i] = a
+
+    m1 = np.dot(input, W1) + b1
+    o1 = relu(m1)
+
+    m2 = np.dot(o1, W2) + b2
+    o2 = relu(m2)
+
+    m3 = np.dot(o2, W3) + b3
+    y = softmax(m3)
+
+    return y
+
+# def gradient(train_data, train_labels):
+#     grads = {}
+#     batch_num = train_data.shape[0]
+
+#     global W1, W2, W3, b1, b2, b3
+
+#     m1 = np.dot(train_data, W1) + b1
+#     o1 = relu(m1)
+
+#     m2 = np.dot(o1, W2) + b2
+#     o2 = relu(m2)
+
+#     m3 = np.dot(o2, W3) + b3
+#     y = softmax(m3)
+
+#     dy = 0.01
+
+#     W3 = np.dot(o2.T, dy)
+#     b3 = np.sum(dy, axis = 0)
+
+#     W2 = np.dot(o1.T, dy)
+#     b2 = np.sum(dy, axis = 0)
+
+#     da1 = np.dot(dy, W2.T)
+#     dz1 = sigmoid_grad(m1) * da1
+
+#     W1 = np.dot(train_data.T, dz1)
+#     b1 = np.sum(dz1, axis = 0)
+
+#     return grads
+
+# def gradient1(train_datas):
+#     global W1, W2, W3, b1, b2, b3
+
+#     m1 = np.dot(train_data, W1) + b1
+#     o1 = relu(m1)
+  
+#     m2 = np.dot(o1, W2) + b2
+#     o2 = relu(m2)
+  
+#     m3 = np.dot(o2, W3) + b3
+#     y = softmax(m3)
+  
+#     return y
+
+train_data, train_labels = get_train_data()
+test_data, test_labels = get_test_data()
+
+for i in range(0, len(train_data), batch_size):
+    batch = train_data[i : i+batch_size]
+    pre = model(batch)
+    y_max = np.argmax(pre, axis = 1)
+    t_max = np.argmax(train_labels[i : i+batch_size], axis = 1)
+    accuracy += np.sum(y_max == t_max)
+  
+    print('{}개중에 {}개맞음'.format(i, accuracy))
+
+print("정확도 : {}, loss : {}".format(float(accuracy / len(train_data)), loss(pre, train_labels)))
+
+# gradient(train_data, train_labels)
+
+# for i in range(0, len(train_data), batch_size):
+#     batch2 = train_data[i : i+batch_size]
+#     pre = gradient1(batch2)
+#     y_max = np.argmax(pre, axis = 1)
+#     t_max = np.argmax(train_labels[i : i+batch_size], axis = 1)
+#     accuracy += np.sum(y_max == t_max)
+  
+#     print('{}개중에 {}개맞음'.format(i+batch_size, accuracy))
+
+# print("정확도 : {}, loss : {}".format(float(accuracy / len(train_data)), loss(pre, train_labels)))
