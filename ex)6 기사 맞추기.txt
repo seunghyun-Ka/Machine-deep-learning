@@ -1,0 +1,50 @@
+from keras.datasets import reuters
+from keras.models import Sequential
+from keras.layers import Dense, LSTM, Embedding
+from keras.preprocessing import sequence
+from keras.utils import np_utils
+
+import numpy
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+seed = 0
+numpy.random.seed(seed)
+tf.set_random_seed(seed)
+
+#글자를 그대로 가져오는것이 아닌 빈도가 높은것만 가져오기 때문에 빈도가 1~1000인것을 가져오겠다는 의미
+(X_train, Y_train), (X_test, Y_test) = reuters.load_data(num_words=1000, test_split=0.2) # 그냥 가져오는 방식
+
+# 데이터 전처리 한 기사에서 단어 수가 100개보다 많으면 100개 이후 다 버리고 100개보다 작으면 나머지 0으로 채워넘
+x_train = sequence.pad_sequences(X_train, maxlen=100)
+x_test = sequence.pad_sequences(X_test, maxlen=100)
+
+# y데이터에 원-핫 인코딩
+y_train = np_utils.to_categorical(Y_train)
+y_test = np_utils.to_categorical(Y_test)
+
+model = Sequential()
+model.add(Embedding(1000, 100)) #입력된 값을 다음 층이 알아들을 수 있도록 변환해주는 함수 (총 단어 수, 기사당 단어 수)
+model.add(LSTM(100, activation = 'tanh')) #가중치 제어 (기사당 단어 수, 기타옵션)
+model.add(Dense(46, activation='softmax'))
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+history = model.fit(x_train, y_train, batch_size=100, epochs=20, validation_data=(x_test, y_test))
+
+print("\n Test Accuracy: %.4f" % (model.evaluate(x_test, y_test)[1]))
+
+y_vloss = history.history['val_loss']
+
+# 학습셋의 오차
+y_loss = history.history['loss']
+
+# 그래프로 표현
+x_len = numpy.arange(len(y_loss))
+plt.plot(x_len, y_vloss, marker='.', c="red", label='Testset_loss')
+plt.plot(x_len, y_loss, marker='.', c="blue", label='Trainset_loss')
+
+# 그래프에 그리드를 주고 레이블을 표시
+plt.legend(loc='upper right')
+plt.grid()
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.show()

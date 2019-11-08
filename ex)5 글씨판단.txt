@@ -1,0 +1,83 @@
+from keras.datasets import mnist #손글씨 불러오기
+from keras.utils import np_utils
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.callbacks import ModelCheckpoint,EarlyStopping
+from keras.layers import Dense, Dropout, Flatten, Conv2D,MaxPooling2D
+import matplotlib.pyplot as plt #이미지 출력
+import numpy
+import sys
+import tensorflow as tf
+import os
+
+seed = 0
+numpy.random.seed(seed)
+tf.set_random_seed(seed)
+
+(edu_x, edu_class_y), (test_x, test_class_y) = mnist.load_data() # 데이터 집어넣기
+
+# print("학습셋 이미지 수: %d개" % edu_x.shape[0])   # 6:1 국룰임
+# print("학습셋 이미지 수: %d개" % test_x.shape[0])
+
+# plt.imshow(edu_x[0], cmap='Greys') #그레이색으로 출력
+# plt.show()
+
+# 그림 숫자로 출력
+# for x in edu_x[0]:
+#     for i in x:
+#         sys.stdout.write('%d\t' % i)
+#     sys.stdout.write('\n')
+
+edu_x = edu_x.reshape(edu_x.shape[0], 28, 28, 1).astype('float32') / 255 #케라스는  0~1에서 최고 성능 보이기에 바꿔줌
+
+test_x = test_x.reshape(test_x.shape[0], 28, 28, 1).astype('float32') / 255
+
+# print("class : %d" % (edu_class_y[1])) # 레이블 확인 0번은 5임 1번은 0었음
+
+edu_y = np_utils.to_categorical(edu_class_y)
+test_y = np_utils.to_categorical(test_class_y) #원핫인코딩 5를 0000100000로 바꿔줌 to_categorical(클래스, 클래스의 개수)
+# print(edu_y[0])
+
+model =Sequential()
+model.add(Conv2D(32, kernel_size=(3, 3), input_shape=(28, 28, 1),activation='relu'))
+model.add(Conv2D(64, (3, 3), activation='relu')) #마스크 적용
+model.add(MaxPooling2D(pool_size=2))  #간추리기
+model.add(Dropout(0.25))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(10, activation='softmax'))
+
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+
+# MODEL_DIR = './model/'
+# if not os.path.exists(MODEL_DIR):
+#     os.mkdir(MODEL_DIR)
+
+
+# modelpath="./model/{epoch:02d}-{valloss:.4f}.hdf5"
+# checkpointer = ModelCheckpoint(filepath=modelpath, monitor='valloss', verbose=1, save_best_only=True)
+early_stopping_callback = EarlyStopping(monitor='val_loss',patience=10)
+
+history = model.fit(edu_x, edu_y, validation_data=(test_x, test_y), epochs=30, batch_size=200, verbose=0, callbacks=[early_stopping_callback])
+
+print('\n Test Accuracy: %.4f' % (model.evaluate(test_x, test_y)[1]))
+
+#그래프
+y_vloss = history.history['val_loss']
+
+# 학습셋의 오차
+y_loss = history.history['loss']
+
+# 그래프로 표현
+x_len = numpy.arange(len(y_loss))
+plt.plot(x_len, y_vloss, marker='.', c='red', label='Testset_loss')
+plt.plot(x_len, y_loss, marker='.', c='blue', label='Trainset_loss')
+
+# 그래프에 그리드를 주고 레이블을 표시
+plt.legend(loc='upper right')
+plt.grid()
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.show()
