@@ -1,0 +1,109 @@
+import numpy as np
+import tensorflow as tf
+import random
+from PIL import Image
+from tensorflow.keras.datasets import mnist
+
+input_dim = 784
+hidden_dim = 256
+hidden_dim2 = 128
+output_dim = 10
+accuracy = 0
+# 입력가중치
+W1 = [[0 for i in range(hidden_dim)] for j in range(input_dim)]
+b1 = [0 for i in range(hidden_dim)]
+W1 = np.array(W1)
+b1 = np.array(b1)
+# 은닉가중치
+W2 = [[0 for i in range(hidden_dim2)] for j in range(hidden_dim)]
+b2 = [0 for i in range(hidden_dim2)]
+W2 = np.array(W2)
+b2 = np.array(b2)
+# 은닉가중치2
+W3 = [[0 for i in range(output_dim)] for j in range(hidden_dim2)]
+b3 = [0 for i in range(output_dim)]
+W3 = np.array(W3)
+b3 = np.array(b3)
+
+# 렐루 함수
+def relu(x):
+    return np.maximum(0, x)
+# 시그모이드 함수
+def sigmoid(x):
+    return 1/(1+np.exp(-x))
+# 소프트맥스
+def softmax(a):
+    c = np.max(a)
+    exp_a = np.exp(a-c)
+    sum_exp_a = np.sum(exp_a)
+    y = exp_a/sum_exp_a
+    return y
+
+def get_train_data():
+    (train_data, train_labels), (test_data, test_labels) = mnist.load_data()
+    # flatten = 2차원 1차원으로 펴줌
+    train_data = train_data.reshape(-1,input_dim)
+
+    return train_data, train_labels
+
+def get_test_data():
+    (train_data, train_labels), (test_data, test_labels) = mnist.load_data()
+    # flatten = 2차원 1차원으로 펴줌
+    test_data = test_data.reshape(-1, input_dim)
+
+    #normaloze = 0~1로 만들어줌
+    test_data = test_data.astype(np.float32) / 255
+
+    return test_data, test_labels
+
+def model(input):
+    for i in range(input_dim):
+        for j in range(hidden_dim):
+            a = random.randrange(1,5)
+            W1[i][j] = a
+
+    for i in range(hidden_dim):
+        for j in range(hidden_dim2):
+            a = random.randrange(1,5)
+            W1[i][j] = a
+    a = random.randrange(1,5)
+    b1[i] = a
+
+    for i in range(hidden_dim2):
+        for j in range(output_dim):
+            a = random.randrange(1,5)
+            W1[i][j] = a
+    a = random.randrange(1,5)
+    b2[i] = a
+
+    for i in range(output_dim):
+        a = random.randrange(1,5)
+        b3[i] = a
+
+  # ini = [1,2,3]
+  # ini2 = [[1 for i in range(2)] for j in range(3)]
+  # m5 = np.dot(ini, ini2)
+  # print(m5)
+
+    m1 = np.dot(input, W1) + b1
+    o1 = relu(m1)
+
+    m2 = np.dot(o1, W2) + b2
+    o2 = relu(m2)
+
+    m3 = np.dot(o2, W3) + b3
+    y = softmax(m3)
+
+    return y
+
+train_data, train_labels = get_train_data()
+test_data, test_labels = get_test_data()
+
+for i in range(len(test_data)):
+    y = model(test_data[i])
+    max = np.argmax(y)
+  
+    if max == test_labels[i] :
+        accuracy += 1
+
+print("정확도 : {}".format(float(accuracy / len(test_data))))
