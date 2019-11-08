@@ -1,0 +1,21 @@
+x = [2, 4, 6, 8, 10]
+y = [75, 87, 92, 97, 100]
+
+x_avg = sum(x, 0) / len(x)
+y_avg = sum(y, 0) / len(y)
+
+a_gra_num = 0.0
+# 분자
+for i in range(len(x)):
+    a_gra_num += (x[i] - x_avg)*(y[i] - y_avg)
+
+a_den_num = 0.0
+# 분모
+for i in range(len(x)):
+    a_den_num += pow((x[i] - x_avg), 2) # pow 제곱
+
+a = a_gra_num / a_den_num # a = 기울기
+b = y_avg - (x_avg* a) # y의 절편
+
+print("기울기 : ", a)
+print("절편 : ", b)

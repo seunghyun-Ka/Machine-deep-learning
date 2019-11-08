@@ -1,0 +1,28 @@
+import math # 제곱근을 위한
+
+ab = [3, 72.2]
+data = [[2, 75], [4, 87], [6, 92], [8, 97], [10, 100]]
+
+x = [i[0] for i in data]
+y = [i[1] for i in data]
+
+# 일차방정식
+def liner(x):
+    return ab[0]*x + ab[1]
+
+# 평균제곱근
+def rmse(pre_y, act_y):
+    temp = 0.0
+    for i in range(len(x)):
+        temp += pow(pre_y[i] - act_y[i], 2)
+    temp = math.sqrt(temp / float(len(pre_y)))
+    return temp
+
+#예측 값
+predict_result = []
+
+for i in range(len(x)):
+    predict_result.append(liner(x[i]))
+    print("x값 : %.f, y값 : %.f, 예측 y값 : %.f" % (x[i], y[i], predict_result[i]))
+
+print(rmse(predict_result, y))
