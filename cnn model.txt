@@ -1,0 +1,166 @@
+import os  #디렉토리 경로 호출
+import cv2  #이미치 파일 불러옴
+import numpy as np
+from sklearn.preprocessing import LabelEncoder  #리스트 > 어레이
+from sklearn.preprocessing import OneHotEncoder  #어레이를 원핫인코딩
+from numpy import array
+import tensorflow as tf
+from tensorflow import keras
+
+learning_rate = 0.001
+training_epochs = 100
+batch_size = 100
+output = 4;
+
+TRAIN_DIR = 'C:\cnn1\my_cat_dog\\train'  #경로지정
+train_folder_list = array(os.listdir(TRAIN_DIR))  #파일 이름을 어레이로(['cat' 'dog'])
+
+train_images = []
+train_label = []
+
+label_encoder = LabelEncoder()  # LabelEncoder Class 호출 폴더 리스트를 어레이로
+integer_encoded = label_encoder.fit_transform(train_folder_list)  #['cat', 'dog'를 0과 1로 변경]
+
+onehot_encoder = OneHotEncoder(sparse=False)   #원핫인코딩
+integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
+onehot_encoded = onehot_encoder.fit_transform(integer_encoded)  #[[1. 0.],[0. 1.]]
+
+for index in range(len(train_folder_list)):  #이미지를 어레이 형태로
+    path = os.path.join(TRAIN_DIR, train_folder_list[index])
+    path = path + '/'
+    img_list = os.listdir(path)
+    for img in img_list:
+        img_path = os.path.join(path, img)
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        #img = cv2.resize(img,(150, 150), interpolation = cv2.INTER_CUBIC)  #리사이징 오픈 cv로
+        train_images.append([np.array(img)])  #  배열에 추가
+        train_label.append(np.array(onehot_encoded[index]))
+
+# train_images = np.reshape(train_images, (-1, 22500))  # 일차원배열로
+# train_label = np.reshape(train_label, (-1, 2))
+train_images = np.array(train_images).astype(np.float32)
+train_label = np.array(train_label).astype(np.float32)
+np.save("train_data.npy", train_images)
+np.save("train_label.npy", train_label)
+TEST_DIR = 'C:\cnn1\my_cat_dog\\test'
+test_folder_list = array(os.listdir(TEST_DIR))
+ 
+test_images = []
+test_label = []
+ 
+label_encoder = LabelEncoder()
+integer_encoded = label_encoder.fit_transform(test_folder_list)
+ 
+onehot_encoder = OneHotEncoder(sparse=False) 
+integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
+onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
+ 
+for index in range(len(test_folder_list)):
+    path = os.path.join(TEST_DIR, test_folder_list[index])
+    path = path + '/'
+    img_list = os.listdir(path)
+    for img in img_list:
+        img_path = os.path.join(path, img)
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        #img = cv2.resize(img,(150, 150), interpolation = cv2.INTER_CUBIC)
+        test_images.append([np.array(img)])
+        test_label.append(np.array(onehot_encoded[index]))
+ 
+# test_images = np.reshape(test_images, (-1, 22500))  # 일차원배열로
+# test_label = np.reshape(test_label, (-1, 2))
+test_images = np.array(test_images).astype(np.float32)
+test_label = np.array(test_label).astype(np.float32)
+np.save("test_images.npy",test_images)
+np.save("test_label.npy",test_label)
+
+train_images = train_images.astype(np.float32) / 255  #  정규화
+test_images = test_images.astype(np.float32) / 255
+
+train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_label)).shuffle(
+                buffer_size=1000000).batch(batch_size)
+test_dataset = tf.data.Dataset.from_tensor_slices((test_images, test_label)).batch(batch_size)
+
+
+
+class MNISTModel(tf.keras.Model):
+    def __init__(self):
+        super(MNISTModel, self).__init__()
+        self.conv1 = keras.layers.Conv2D(filters=32, kernel_size=[3, 3], padding='SAME', activation=tf.nn.relu)
+        self.pool1 = keras.layers.MaxPool2D(padding='SAME')
+        self.conv2 = keras.layers.Conv2D(filters=64, kernel_size=[3, 3], padding='SAME', activation=tf.nn.relu)
+        self.pool2 = keras.layers.MaxPool2D(padding='SAME')
+        self.conv3 = keras.layers.Conv2D(filters=128, kernel_size=[3, 3], padding='SAME', activation=tf.nn.relu)
+        self.pool3 = keras.layers.MaxPool2D(padding='SAME')
+        self.pool3_flat = keras.layers.Flatten()
+        self.dense4 = keras.layers.Dense(units=256, activation=tf.nn.relu)
+        self.drop4 = keras.layers.Dropout(rate=0.3)
+        self.dense5 = keras.layers.Dense(units=128, activation=tf.nn.relu)
+        self.drop5 = keras.layers.Dropout(rate=0.2)
+        self.dense6 = keras.layers.Dense(units=64, activation=tf.nn.relu)
+        self.drop6 = keras.layers.Dropout(rate=0.1)
+        self.dense7 = keras.layers.Dense(units=output)
+    def call(self, inputs, training=False):
+        net = self.conv1(inputs)
+        net = self.pool1(net)
+        net = self.conv2(net)
+        net = self.pool2(net)
+        net = self.conv3(net)
+        net = self.pool3(net)
+        net = self.pool3_flat(net)
+        net = self.dense4(net)
+        net = self.drop4(net)
+        net = self.dense5(net)
+        net = self.drop5(net)
+        net = self.dense6(net)
+        net = self.drop6(net)
+        net = self.dense7(net)
+        return net
+model = MNISTModel()
+def loss_fn(model, images, labels):
+    logits = model(images, training=True)
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+            logits=logits, labels=labels))    
+    return loss
+
+def grad(model, images, labels):
+    with tf.GradientTape() as tape:
+        loss = loss_fn(model, images, labels)
+    return tape.gradient(loss, model.variables)
+
+def evaluate(model, images, labels):
+    logits = model(images, training=False)
+    correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    return accuracy
+optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
+
+print('Learning started. It takes sometime.')
+for epoch in range(training_epochs):
+    avg_loss = 0.
+    avg_train_acc = 0.
+    avg_test_acc = 0.
+    train_step = 0
+    test_step = 0
+    
+    for images, labels in train_dataset:
+        grads = grad(model, images, labels)                
+        optimizer.apply_gradients(zip(grads, model.variables))
+        loss = loss_fn(model, images, labels)
+        acc = evaluate(model, images, labels)
+        avg_loss = avg_loss + loss
+        avg_train_acc = avg_train_acc + acc
+        train_step += 1
+    avg_loss = avg_loss / train_step
+    avg_train_acc = avg_train_acc / train_step
+    
+    for images, labels in test_dataset:        
+        acc = evaluate(model, images, labels)        
+        avg_test_acc = avg_test_acc + acc
+        test_step += 1    
+    avg_test_acc = avg_test_acc / test_step    
+
+    print('Epoch:', '{}'.format(epoch + 1), 'loss =', '{:.8f}'.format(avg_loss), 
+          'train accuracy = ', '{:.4f}'.format(avg_train_acc), 
+          'test accuracy = ', '{:.4f}'.format(avg_test_acc))
+
+print('Learning Finished!')
